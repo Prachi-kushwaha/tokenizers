@@ -23,35 +23,35 @@ def merge(indices: List[int], pair: tuple[int, int], new_index: int) ->List[int]
     return new_indices
 
 
-def train_bpe(string:str, num_merges:int) -> BPETokenizerParams:
-
-    chunks = re.findall(r"\w+|[^\w\s]", string)
-
-    indices = []
-    for chunk in chunks:
-        indices.extend(list(chunk.encode("utf-8")))
-    merges: dict[tuple[int, int], int] = {}
-    vocab: dict[int, bytes] = {x:bytes([x]) for x in range(256)}
-
-    for i in range(num_merges):
-        count = defaultdict(int)
-        for index1, index2 in zip(indices, indices[1:]):
-            count[(index1, index2)] += 1
-
-        pair = max(count, key=count.get)
-        (index1, index2) = pair
-
-        new_index = 256 + i
-        merges[pair] = new_index
-        vocab[new_index] = vocab[index1] + vocab[index2]
-        indices = merge(indices, pair, new_index)
-
-    return BPETokenizerParams(vocab=vocab, merges=merges)
-
 class BPETokenizer(Tokenizer):
     """BPE tokenizer given a set of merges and a vocabulary."""
     def __init__(self, params: BPETokenizerParams):
         self.params = params
+
+    def train_bpe(string:str, num_merges:int) -> BPETokenizerParams:
+        chunks = re.findall(r"\w+|[^\w\s]", string)
+
+        indices = []
+        for chunk in chunks:
+            indices.extend(list(chunk.encode("utf-8")))
+        merges: dict[tuple[int, int], int] = {}
+        vocab: dict[int, bytes] = {x:bytes([x]) for x in range(256)}
+
+        for i in range(num_merges):
+            count = defaultdict(int)
+            for index1, index2 in zip(indices, indices[1:]):
+                count[(index1, index2)] += 1
+
+            pair = max(count, key=count.get)
+            (index1, index2) = pair
+
+            new_index = 256 + i
+            merges[pair] = new_index
+            vocab[new_index] = vocab[index1] + vocab[index2]
+            indices = merge(indices, pair, new_index)
+
+        return BPETokenizerParams(vocab=vocab, merges=merges)
+
     def encode(self, string: str) -> list[int]:
         indices = list(map(int, string.encode("utf-8")))  # @inspect indices
         # Note: this is a very slow implementation
