@@ -1,0 +1,10 @@
+[project]
+name = "my-tokenizer"
+version = "0.1.0"
+description = "A simple tokenizer library"
+authors = [{name = "Prachi Kushwaha"}]
+dependencies = []
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
