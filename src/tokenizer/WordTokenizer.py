@@ -17,5 +17,5 @@ class WordTokenizer(Tokenizer):
         tokens = re.findall(r"\b\w+\b", text.lower())
         return [self.vocab.get(word, -1) for word in tokens]
 
-    def decode(self, indices):
-        return " ".join(self.inv_vocab.get(i, "<UNK>") for i in indices)
+    def decode(self):
+        token = "hello"
