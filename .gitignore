@@ -1,3 +1,5 @@
 dist/
 my_tokenizer.egg-info/
 tokenizer/__pycache__/
+tokenizer/__pycache__
+__pycache__
