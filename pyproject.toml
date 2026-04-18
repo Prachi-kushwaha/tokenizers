@@ -1,5 +1,5 @@
 [project]
-name = "my-tokenizer"
+name = "my_tokenizer"
 version = "0.1.0"
 description = "A simple tokenizer library"
 authors = [{name = "Prachi Kushwaha"}]
