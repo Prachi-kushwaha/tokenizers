@@ -3,3 +3,13 @@ my_tokenizer.egg-info/
 tokenizer/__pycache__/
 tokenizer/__pycache__
 __pycache__
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+dist/
+*.egg-info/
+
+.env
