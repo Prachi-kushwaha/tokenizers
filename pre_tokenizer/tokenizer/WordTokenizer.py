@@ -1,5 +1,5 @@
 import re
-from tokenizer import Tokenizer
+from  .base import Tokenizer
 from typing import Dict, List
 
 class WordTokenizer(Tokenizer):
