@@ -2,7 +2,7 @@ from BPETokenizer import merge
 from BPETokenizer import BPETokenizers
 
 
-def token_mapping(tokenizer, encoded):
+def show_token_mapping(tokenizer, encoded):
 
     for token in encoded:
         piece = tokenizer.params.vocab[token].decode("utf-8", errors="replace")
@@ -18,8 +18,8 @@ def show_bpe_steps(tokenizer: BPETokenizers, text: str):
     def decode(indices):
         return "".join(vocab[i].decode("utf-8", errors="replace") for i in indices)
 
-    print("Initial indices:", indices)
-    print("Initial text:", decode(indices))
+    # print("Initial indices:", indices)
+    # print("Initial text:", decode(indices))
 
     for step, (pair, new_index) in enumerate(merges, 1):
         pair_str = (
