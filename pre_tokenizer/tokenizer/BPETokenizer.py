@@ -24,7 +24,7 @@ def merge(indices: List[int], pair: Tuple[int, int], new_index: int) -> List[int
     return new_indices
 
 
-class BPETokenizer(Tokenizer):
+class BPETokenizers(Tokenizer):
     def __init__(self, params: BPETokenizerParams):
         self.params = params
 
