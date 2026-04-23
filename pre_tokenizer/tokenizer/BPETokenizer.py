@@ -65,7 +65,7 @@ class BPETokenizers(Tokenizer):
 
         return BPETokenizerParams(vocab=vocab, merges=merges)
 
-    def encode(self, string: str) -> List[int]:
+    def encoder(self, string: str) -> List[int]:
         indices = list(string.encode("utf-8"))
 
         # apply merges in correct order
@@ -74,6 +74,6 @@ class BPETokenizers(Tokenizer):
 
         return indices
 
-    def decode(self, indices: List[int]) -> str:
+    def decoder(self, indices: List[int]) -> str:
         vocab = self.params.vocab
-        return b"".join(vocab[i] for i in indices).decode("utf-8")
+        return b"".join(vocab.get(i, b"<UNK>") for i in indices).decode("utf-8", errors="replace")

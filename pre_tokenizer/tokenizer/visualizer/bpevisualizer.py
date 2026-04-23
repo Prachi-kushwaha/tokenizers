@@ -15,7 +15,7 @@ def show_bpe_steps(tokenizer: BPETokenizers, text: str):
     # start from raw bytes
     indices = list(text.encode("utf-8"))
 
-    def decode(indices):
+    def decoder(indices):
         return "".join(vocab[i].decode("utf-8", errors="replace") for i in indices)
 
     # print("Initial indices:", indices)
@@ -35,4 +35,4 @@ def show_bpe_steps(tokenizer: BPETokenizers, text: str):
         indices = merge(indices, pair, new_index)
 
         print("Updated indices:", indices)
-        print("Decoded:", decode(indices))
+        print("Decoded:", decoder(indices))

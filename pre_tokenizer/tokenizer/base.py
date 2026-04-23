@@ -7,11 +7,15 @@ from typing import List
 class Tokenizer(ABC):
 
     @abstractmethod
-    def encode(self, text:str)->List[int]:
+    def train(self, text:str, num_merges:int)->List[int]:
         pass
 
     @abstractmethod
-    def decode(self, indices:List[int])->str:
+    def encoder(self, text:str)->List[int]:
+        pass
+
+    @abstractmethod
+    def decoder(self, indices:List[int])->str:
         pass
 
 

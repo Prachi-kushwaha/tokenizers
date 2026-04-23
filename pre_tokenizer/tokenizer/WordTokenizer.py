@@ -7,15 +7,15 @@ class WordTokenizer(Tokenizer):
         self.vocab = vocab
         self.inv_vocab = {v: k for k, v in vocab.items()}
 
-    @classmethod
-    def train(cls, text):
+    def train(self, text:str):
         tokens = re.findall(r"\b\w+\b", text.lower())
         vocab = {word: idx for idx, word in enumerate(set(tokens))}
-        return cls(vocab)
+        return vocab
 
-    def encode(self, text):
+    def encoder(self, text:str):
         tokens = re.findall(r"\b\w+\b", text.lower())
         return [self.vocab.get(word, -1) for word in tokens]
 
-    def decode(self):
-        token = "hello"
+    def decoder(self, indices: List[int]) -> str:
+        words = [self.inv_vocab.get(i, "<UNK>") for i in indices]
+        return " ".join(words)
