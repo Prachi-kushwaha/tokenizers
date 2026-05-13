@@ -44,7 +44,10 @@ class MultiHeadAttention(nn.Module):
 
         self.out_proj = nn.Linear(hidden_size, hidden_size)
 
-    def forward(self, x):
+        self.attn_dropout = nn.Dropout(0.1)
+        self.resid_dropout = nn.Dropout(0.1)
+
+    def forward(self, x, mask=None):
 
         B, S, D = x.shape
 
@@ -61,8 +64,10 @@ class MultiHeadAttention(nn.Module):
         attention = q @ k.transpose(-2, -1)
 
         attention = attention / math.sqrt(self.head_dim)
-
+        if mask is not None:
+           attention = attention.masked_fill(mask == 0, float('-inf'))
         attention = torch.softmax(attention, dim=-1)
+        attention = self.attn_dropout(attention)
 
         out = attention @ v
 
@@ -71,6 +76,7 @@ class MultiHeadAttention(nn.Module):
         out = out.view(B, S, D)
 
         out = self.out_proj(out)
+        out = self.resid_dropout(out)
 
         return out
 
@@ -82,7 +88,9 @@ class FeedForward(nn.Module):
         self.net = nn.Sequential(
             nn.Linear(hidden_size, mlp_dim),
             nn.GELU(),
-            nn.Linear(mlp_dim, hidden_size)
+            nn.Dropout(0.1),
+            nn.Linear(mlp_dim, hidden_size),
+            nn.Dropout(0.1)
         )
 
     def forward(self, x):
@@ -95,27 +103,27 @@ class TransformerBlock(nn.Module):
     def __init__(self, hidden_size, num_heads, mlp_dim):
         super().__init__()
 
-        self.norm1 = nn.LayerNorm(hidden_size)
-
         self.attn = MultiHeadAttention(
             hidden_size,
             num_heads
         )
 
-        self.norm2 = nn.LayerNorm(hidden_size)
+        self.norm1 = nn.LayerNorm(hidden_size)
 
         self.mlp = FeedForward(
             hidden_size,
             mlp_dim
         )
 
-    def forward(self, x):
+        self.norm2 = nn.LayerNorm(hidden_size)
+
+    def forward(self, x, mask=None):
 
         # attention block
-        x = x + self.attn(self.norm1(x))
+        x = self.norm1(x + self.attn(x, mask))
 
         # feedforward block
-        x = x + self.mlp(self.norm2(x))
+        x = self.norm2(x + self.mlp(x))
 
         return x
 
@@ -136,15 +144,19 @@ class Transformer(nn.Module):
         self.final_norm = nn.LayerNorm(hidden_size)
 
         self.lm_head = nn.Linear(hidden_size, vocab_size)
+        self.resid_dropout = nn.Dropout(0.1)
 
     def forward(self, x):
-
+        PAD_ID = 0
+        mask = (x != PAD_ID).unsqueeze(1).unsqueeze(2)
         x = self.embedding(x)
 
         x = self.pe(x)
+        x = self.resid_dropout(x)
+
 
         for block in self.blocks:
-            x = block(x)
+            x = block(x, mask)
 
         x = self.final_norm(x)
 
