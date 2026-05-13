@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import math
 
 class PE(nn.Module):
     def __init__(self, hidden_size, seq_len):
@@ -32,12 +33,15 @@ class PE(nn.Module):
 
 
 class transformers(nn.Module):
-    def __init__(self, vocab_size, seq_len, hidden_size):
+    def __init__(self, vocab_size, seq_len, hidden_size, head_no):
         super().__init__()
 
         self.vocab_size = vocab_size
         self.seq_len = seq_len
         self.hidden_size = hidden_size
+        self.head_no = head_no
+        assert hidden_size % head_no == 0
+        self.head_dim = hidden_size // head_no
         self.qkv_proj = nn.Linear(hidden_size, 3*hidden_size, bias = False)
         self.embedd = nn.Embedding(seq_len, hidden_size)
 
@@ -63,8 +67,19 @@ class transformers(nn.Module):
 
         # split q,k,v
         q, k, v = torch.chunk(qkv, 3, dim=-1)
+        q = q.view(B, S, self.head_no, self.head_dim).transpose(1, 2)
+        k = k.view(B, S, self.head_no, self.head_dim).transpose(1, 2)
+        v = v.view(B, S, self.head_no, self.head_dim).transpose(1, 2)
 
-        return q, k, v
+        attention_score = q @ (k.transpose(-2,-1))
 
+        attention_score = attention_score / math.sqrt(self.hidden_size)
+        attention_score = torch.softmax(attention_score, dim=-1)
+        attention_score = attention_score @ v
+
+        out = out.transpose(1, 2).contiguous()
+
+        out = out.view(B, S, self.hidden_size)
+        return out
 
 
