@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
 import math
 
 class PE(nn.Module):
@@ -32,7 +34,7 @@ class PE(nn.Module):
 
 
 
-class transformers(nn.Module):
+class transformerAttention(nn.Module):
     def __init__(self, vocab_size, seq_len, hidden_size, head_no):
         super().__init__()
 
@@ -43,7 +45,9 @@ class transformers(nn.Module):
         assert hidden_size % head_no == 0
         self.head_dim = hidden_size // head_no
         self.qkv_proj = nn.Linear(hidden_size, 3*hidden_size, bias = False)
-        self.embedd = nn.Embedding(seq_len, hidden_size)
+        self.out_proj = nn.Linear(hidden_size, hidden_size)
+        self.embedd = nn.Embedding(vocab_size, hidden_size)
+        self.norm = nn.LayerNorm(hidden_size)
 
         self.pe = PE(hidden_size, seq_len)
 
@@ -56,7 +60,7 @@ class transformers(nn.Module):
 
 
     def forward(self, x):
-        B, S = x.shape()
+        B, S = x.shape
         token_emb = self.embedd(x)
 
         # apply positional encoding
@@ -73,13 +77,15 @@ class transformers(nn.Module):
 
         attention_score = q @ (k.transpose(-2,-1))
 
-        attention_score = attention_score / math.sqrt(self.hidden_size)
+        attention_score = attention_score / math.sqrt(self.head_dim)
         attention_score = torch.softmax(attention_score, dim=-1)
         attention_score = attention_score @ v
 
-        out = out.transpose(1, 2).contiguous()
+        out = attention_score.transpose(1, 2).contiguous()
 
         out = out.view(B, S, self.hidden_size)
+        out = self.out_proj(out)
+        out = self.norm(x + out)
         return out
 
-
+    
