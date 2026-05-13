@@ -47,7 +47,7 @@ class MultiHeadAttention(nn.Module):
         self.attn_dropout = nn.Dropout(0.1)
         self.resid_dropout = nn.Dropout(0.1)
 
-    def forward(self, x, mask=None):
+    def forward(self, x, mask=None, past_kv=None):
 
         B, S, D = x.shape
 
@@ -60,6 +60,13 @@ class MultiHeadAttention(nn.Module):
         k = k.view(B, S, self.num_heads, self.head_dim).transpose(1, 2)
 
         v = v.view(B, S, self.num_heads, self.head_dim).transpose(1, 2)
+
+        if past_kv is not None:
+            past_key, past_value = past_kv
+            k = torch.cat((past_key, k), dim=-2)
+            v = torch.cat((past_value, v), dim=-2)
+
+        present_kv = (k,v)
 
         attention = q @ k.transpose(-2, -1)
 
@@ -78,7 +85,7 @@ class MultiHeadAttention(nn.Module):
         out = self.out_proj(out)
         out = self.resid_dropout(out)
 
-        return out
+        return out, present_kv
 
 class FeedForward(nn.Module):
 
@@ -117,15 +124,16 @@ class TransformerBlock(nn.Module):
 
         self.norm2 = nn.LayerNorm(hidden_size)
 
-    def forward(self, x, mask=None):
+    def forward(self, x, mask=None, past_kv=None):
 
         # attention block
-        x = self.norm1(x + self.attn(x, mask))
+        attn_out, present_kv = self.attn(x, mask, past_kv)
+        x = self.norm1(x + attn_out)
 
         # feedforward block
         x = self.norm2(x + self.mlp(x))
 
-        return x
+        return x, present_kv
 
 
 class Transformer(nn.Module):
@@ -146,7 +154,11 @@ class Transformer(nn.Module):
         self.lm_head = nn.Linear(hidden_size, vocab_size)
         self.resid_dropout = nn.Dropout(0.1)
 
-    def forward(self, x):
+    def forward(self, x, past_kv=None):
+        if past_kv is None:
+           past_kv = [None] * len(self.blocks)
+
+        new_past_kv = []
         PAD_ID = 0
         mask = (x != PAD_ID).unsqueeze(1).unsqueeze(2)
         x = self.embedding(x)
@@ -155,11 +167,13 @@ class Transformer(nn.Module):
         x = self.resid_dropout(x)
 
 
-        for block in self.blocks:
-            x = block(x, mask)
+        for block, past_kv in zip(self.blocks, past_kv):
+            x, present_kv = block(x, mask, past_kv)
+
+            new_past_kv.append(present_kv)
 
         x = self.final_norm(x)
 
         logits = self.lm_head(x)
 
-        return logits
+        return logits, new_past_kv

@@ -18,8 +18,8 @@ class unigram(Tokenizer):
         token_prob = {token:prob for token in vocab}
         return token_prob
 
-    # def forward(self, text):
-    #     n = len(text)
+    def forward(self, text):
+        n = len(text)
 
 
 
