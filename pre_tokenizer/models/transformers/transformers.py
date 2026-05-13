@@ -24,11 +24,11 @@ class PositionalEncoding(nn.Module):
 
         self.register_buffer("pe", pe)
 
-    def forward(self, x):
+    def forward(self, x, offset=0):
 
         S = x.size(1)
 
-        return x + self.pe[:, :S, :]
+        return x + self.pe[:, offset:offset+S, :]
 class MultiHeadAttention(nn.Module):
 
     def __init__(self, hidden_size, num_heads):
@@ -155,20 +155,34 @@ class Transformer(nn.Module):
         self.resid_dropout = nn.Dropout(0.1)
 
     def forward(self, x, past_kv=None):
-        if past_kv is None:
-           past_kv = [None] * len(self.blocks)
-
+        past_length = 0
         new_past_kv = []
         PAD_ID = 0
-        mask = (x != PAD_ID).unsqueeze(1).unsqueeze(2)
+        if past_kv is None:
+          past_kv = [None] * len(self.blocks)
+        else:
+          past_length = past_kv[0][0].size(-2)
+
+        total_len = past_length + x.size(1)
+        causal_mask = torch.tril(
+            torch.ones(
+                x.size(1),
+                total_len,
+                device=x.device
+            )
+        ).bool()
+        causal_mask = causal_mask.unsqueeze(0).unsqueeze(0)
+
+        padding_mask = (x != PAD_ID).unsqueeze(1).unsqueeze(2)
+        mask = causal_mask & padding_mask
         x = self.embedding(x)
 
-        x = self.pe(x)
+        x = self.pe(x, offset=past_length)
         x = self.resid_dropout(x)
 
 
-        for block, past_kv in zip(self.blocks, past_kv):
-            x, present_kv = block(x, mask, past_kv)
+        for block, layer_past_kv in zip(self.blocks, past_kv):
+            x, present_kv = block(x, mask, layer_past_kv)
 
             new_past_kv.append(present_kv)
 
