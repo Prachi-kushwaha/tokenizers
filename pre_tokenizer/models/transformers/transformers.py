@@ -29,6 +29,7 @@ class PositionalEncoding(nn.Module):
         S = x.size(1)
 
         return x + self.pe[:, offset:offset+S, :]
+
 class MultiHeadAttention(nn.Module):
 
     def __init__(self, hidden_size, num_heads):
@@ -71,8 +72,10 @@ class MultiHeadAttention(nn.Module):
         attention = q @ k.transpose(-2, -1)
 
         attention = attention / math.sqrt(self.head_dim)
+
         if mask is not None:
            attention = attention.masked_fill(mask == 0, float('-inf'))
+
         attention = torch.softmax(attention, dim=-1)
         attention = self.attn_dropout(attention)
 
@@ -105,7 +108,7 @@ class FeedForward(nn.Module):
         return self.net(x)
 
 
-class TransformerBlock(nn.Module):
+class TransformerEncoderBlock(nn.Module):
 
     def __init__(self, hidden_size, num_heads, mlp_dim):
         super().__init__()
@@ -135,6 +138,8 @@ class TransformerBlock(nn.Module):
 
         return x, present_kv
 
+class TransformerDecoderBlock(nn.Module):
+    pass
 
 class Transformer(nn.Module):
 
@@ -145,7 +150,7 @@ class Transformer(nn.Module):
 
         self.pe = PositionalEncoding(hidden_size, seq_len)
 
-        self.blocks = nn.ModuleList([ TransformerBlock(hidden_size, num_heads,mlp_dim)
+        self.blocks = nn.ModuleList([ TransformerEncoderBlock(hidden_size, num_heads,mlp_dim)
             for _ in range(num_layers)
         ])
 
@@ -160,17 +165,26 @@ class Transformer(nn.Module):
         PAD_ID = 0
         if past_kv is None:
           past_kv = [None] * len(self.blocks)
+          past_length = 0
+          total_len = x.size(1)
+          causal_mask = torch.tril(
+          torch.ones(
+            x.size(1),
+            total_len,
+            device=x.device
+          )
+        ).bool()
         else:
           past_length = past_kv[0][0].size(-2)
 
-        total_len = past_length + x.size(1)
-        causal_mask = torch.tril(
-            torch.ones(
-                x.size(1),
-                total_len,
-                device=x.device
-            )
-        ).bool()
+          total_len = past_length + x.size(1)
+          causal_mask =torch.ones(
+                  x.size(1),
+                  total_len,
+                  device=x.device
+              ).bool()
+
+
         causal_mask = causal_mask.unsqueeze(0).unsqueeze(0)
 
         padding_mask = (x != PAD_ID).unsqueeze(1).unsqueeze(2)
